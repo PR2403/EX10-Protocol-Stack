@@ -5,14 +5,17 @@ EX10 系列 UHF RFID 读卡器（E310/E510/E710/E910）的 Rust 协议栈。
 
 ## 当前状态
 
-**M1–M4 已实施完成（2026-10-29）**，`cargo test` 104 项全绿，真机冒烟通过：
+**M1–M4 已实施完成（2026-10-29）**，`cargo test` 108 项全绿（105 协议 + 3 CLI），真机冒烟通过：
 
 - `src/frame/` — 三种 CRC、帧构建器、流式解码器（粘包/断包/噪声/重同步）
 - `src/types/` — bank/region(含各区域默认跳频表)/select/metadata/baud
 - `src/command/` — bootloader/get/set/inventory/access/persist/async_inventory/misc
 - `src/transport/` — Link trait + SerialLink + UhfReader（一发一收、通知分发）
-- `src/main.rs` — `uhf-demo` CLI（info/inventory/async-inventory/read-tid/write-user/echo-detect）
-- 真机验证（2026-10-29）：info 全字段、盘存+缓冲元数据、读 TID、异步盘存 365 条通知均正常
+- `src/main.rs` + `src/cli/` — `uhf-demo` **完整 clap CLI**：
+  `info` / `system` / `config` / `inventory` / `tag` / `multi-tag` / `echo` /
+  `yilian` / `persist` / `firmware` / `raw`（详见 `uhf-demo --help`）
+- 真机验证（2026-10-29）：info 全字段、盘存+缓冲元数据、读 TID、异步盘存 365 条通知均正常；
+  CLI 重写后再次验证 info/只读配置/盘存/单标签/回波/异步盘存（EX 异步在 FCC 区域固件不支持）
 
 设计决策见 `plan/`（注意 §3 扩展帧格式已在实施中修正，以 `plan/01-protocol-summary.md` 为准）。
 `plan/probe_*.py` 是历史验证脚本（保留作复现依据，勿删）；其中
@@ -78,6 +81,9 @@ for b in data[1:]:            # 帧头 0xFF 不参与计算
 - **p.68 EX 异步盘存示例帧有印刷错误**：DataLength 应为 `0x27`（原文印
   `0x13`），MetadataFlags 应为 `0x0016`。勿直接抄手册该帧；已重建验证
   （`plan/probe_p68.py`），CRC 命中 `0ABF`。
+- **p.41 TagEpcAndMeta 尾域语义**：手册称 0x29/0xAA 启用相位时块尾 2 字节为
+  起始相位 PHASE2；真机 Fw 2.0.7.3 的 0x29（flags=0x003F）尾值与 TagCRC
+  完全一致（8/8 标签均命中 PC+EPC 的 ISO6C CRC），CLI 同时标注 PHASE2/TagCRC。
 - 0x06 设置波特率指令已失效，只能用扩展指令 0xAA40 KEY=0x06。
 - 0x2A 清缓存指令已无效。
 - 手册十六进制实例整体可信（40+ 帧验证通过），但抄录进测试时注意 PDF
@@ -108,7 +114,7 @@ for b in data[1:]:            # 帧头 0xFF 不参与计算
 
 ## 约定
 
-- 计划/文档/注释用中文；代码标识符、commit 信息用英文
+- 计划/文档/注释/commit 信息用中文；代码标识符用英文
 - 每条指令实现必须附手册对应十六进制实例作为测试向量（编码+解码双向断言）
 - 修改协议层行为前先更新 `plan/01-protocol-summary.md` 对应条目
 - 探测脚本放 `plan/`，命名 `probe_*.py`；真机测试脚本不得提交设备专属

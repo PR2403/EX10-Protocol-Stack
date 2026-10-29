@@ -181,6 +181,22 @@ impl<L: Link> UhfReader<L> {
         self.tx_and_wait(&tx, crate::frame::EXT_OPCODE, Some(subcode), timeout)
     }
 
+    /// 发送调用方已编码好的完整请求帧并等待应答。
+    ///
+    /// 用于 CLI / 高级调用方直接使用 [`crate::frame::builder`] 或各
+    /// `XxxRequest::encode()`（它们直接产出完整帧）的场景。
+    /// `opcode`/`subcode` 指定期望应答：普通指令传 `opcode` + `None`，
+    /// 扩展指令传 `0xAA` + `Some(SubCode)`。
+    pub fn transact_frame(
+        &mut self,
+        tx: &[u8],
+        opcode: u8,
+        subcode: Option<u16>,
+        timeout: Duration,
+    ) -> Result<RxFrame, TransportError> {
+        self.tx_and_wait(tx, opcode, subcode, timeout)
+    }
+
     fn tx_and_wait(
         &mut self,
         tx: &[u8],
