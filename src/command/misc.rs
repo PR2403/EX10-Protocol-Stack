@@ -170,7 +170,7 @@ impl MultiTagFilterRequest<'_> {
 ///
 /// SubData = TIMEALL(2) + TIMESELWAIT(2) + TIMEREADWAIT(2) + 0x28 形态域。
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct YilianTempRequest<'a> {
+pub struct YilianTempRequest {
     /// 指令执行总时间（ms）。
     pub time_all_ms: u16,
     /// 发送完匹配过滤后的等待（ms，≤300，不用为 0）。
@@ -184,10 +184,9 @@ pub struct YilianTempRequest<'a> {
     pub address: u32,
     pub word_count: u8,
     pub singulation: crate::types::select::TagSingulation,
-    _m: core::marker::PhantomData<&'a ()>,
 }
 
-impl YilianTempRequest<'_> {
+impl YilianTempRequest {
     pub fn encode(&self, out: &mut FrameBuf) -> Result<usize, EncodeError> {
         if self.time_sel_wait_ms > 300 || self.time_read_wait_ms > 300 {
             return Err(EncodeError::InvalidParameter("wait times ≤300ms"));
@@ -306,12 +305,12 @@ pub fn parse_yilian_temp<'a>(
     pos += word_count * 2;
     let tag_len = data[pos] as usize;
     pos += 1;
-    if data.len() < pos + tag_len {
+    if tag_len < 4 || data.len() < pos + tag_len {
         return Err(DecodeError::Truncated);
     }
     let pc = u16::from_be_bytes([data[pos], data[pos + 1]]);
     let epc_id = &data[pos + 2..pos + tag_len - 2];
-    let tag_crc = u16::from_be_bytes([data[pos + tag_len - 2], data[pos + tag_len]]);
+    let tag_crc = u16::from_be_bytes([data[pos + tag_len - 2], data[pos + tag_len - 1]]);
     Ok(YilianTempResponse {
         option,
         metadata_flags: mf,
@@ -456,7 +455,6 @@ mod tests {
             word_count: 1,
             // 手册：过滤 TID，从地址 0 开始，过滤数据 E2008x（20 位）
             singulation: TagSingulation::bank(SelectMode::Tid, 0, 0x14, &[0xE2, 0x00, 0x80]),
-            _m: core::marker::PhantomData,
         };
         let mut buf = FrameBuf::new();
         req.encode(&mut buf).unwrap();
@@ -481,6 +479,34 @@ mod tests {
             hex(&buf),
             "FF 11 AA 4D 6F 64 75 6C 65 74 65 63 68 AA 51 20 20 87 C2 BB DC 50 "
         );
+    }
+
+    /// 0xAA50 响应：ReadData 之后紧跟 TagLEN/PC/EPC/TagCRC，
+    /// 尾部 TagCRC 的第二个字节位于 `pos + tag_len - 1`（回归：曾误读 +1 越界）。
+    #[test]
+    fn yilian_temp_response_parse() {
+        let mut sub = heapless::Vec::<u8, 64>::new();
+        let _ = sub.extend_from_slice(&[0x00, 25, 128, 6, 0x29, 0x48, 0x11, 0x22, 0x33, 0x44]);
+        let mut f = heapless::Vec::<u8, 96>::new();
+        let payload_len = 12 + sub.len() as u8; // Marker(10)+SubCode(2)+SubData
+        let _ = f.push(0xFF);
+        let _ = f.push(payload_len);
+        let _ = f.push(0xAA);
+        let _ = f.extend_from_slice(&[0x00, 0x00]);
+        let _ = f.extend_from_slice(&crate::frame::EXT_MARKER);
+        let _ = f.extend_from_slice(&[0xAA, 0x50]);
+        let _ = f.extend_from_slice(&sub);
+        let c = crate::frame::crc::crc16_ex10(&f[1..]);
+        let _ = f.push((c >> 8) as u8);
+        let _ = f.push(c as u8);
+        let frame = RawFrame::parse(&f).unwrap();
+        let r = parse_yilian_temp(&frame, false, MetadataFlags::NONE, 1).unwrap();
+        assert_eq!(r.read_data, &[25, 128]);
+        assert_eq!(r.pc, 0x2948);
+        assert_eq!(r.epc_id, &[0x11, 0x22]);
+        assert_eq!(r.tag_crc, 0x3344);
+        assert_eq!(temp_range_from_pc(r.pc), TempRange::Range0to120);
+        assert!((convert_temperature(TempRange::Range0to120, [25, 128]).unwrap() - 25.5).abs() < 0.01);
     }
 
     /// 温度量程判定与换算（p.158）。

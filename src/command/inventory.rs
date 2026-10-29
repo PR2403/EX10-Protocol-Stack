@@ -125,14 +125,16 @@ impl SearchFlags {
 
 /// 0x22 嵌入读指令（仅支持嵌入 0x28，p.47-49）。
 ///
+/// Embedded Values = 0x28 的请求 Data：Timeout(2)+Option(1)+MemBank(1)
+/// +Address(**4**)+WordCount(**1**)，共 9 字节（手册 p.51 实例）。
 /// Embedded Values 中的 Timeout/Option 恒 0（不起作用，p.49）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EmbeddedRead {
     pub mem_bank: MemBank,
-    /// 读起始地址（字）。
-    pub address: u16,
-    /// 读字数（嵌入时最多 32 字节 = 16 字，p.49）。
-    pub word_count: u16,
+    /// 读起始地址（字，4 字节）。
+    pub address: u32,
+    /// 读字数（1 字节；手册当前实现上限 32 字，p.49/p.51 矛盾取 32）。
+    pub word_count: u8,
 }
 
 impl EmbeddedRead {
@@ -143,13 +145,13 @@ impl EmbeddedRead {
             return Err(EncodeError::InvalidParameter("embedded read max 32 words"));
         }
         let _ = out.push(0x01); // Embedded Command Count 恒 1
-        let _ = out.push(9); // Embedded Command Length：Op(1)+Timeout(2)+Option(1)+Bank(1)+Addr(2)+Words(2)
+        let _ = out.push(9); // Embedded Values 长度：Timeout2+Option1+Bank1+Addr4+Words1
         let _ = out.push(0x28); // Opcode
         let _ = out.extend_from_slice(&0u16.to_be_bytes()); // Timeout 恒 0
         let _ = out.push(0x00); // Option 恒 0
         let _ = out.push(self.mem_bank.value());
         let _ = out.extend_from_slice(&self.address.to_be_bytes());
-        let _ = out.extend_from_slice(&self.word_count.to_be_bytes());
+        let _ = out.push(self.word_count);
         Ok(())
     }
 }
@@ -605,9 +607,9 @@ mod tests {
         assert_eq!(hex, "FF 05 22 80 00 00 00 C8 33 2D ");
     }
 
-    /// 手册 p.50-51 例3：嵌入 0x28 读 USER bank 32 块。
-    /// 注：手册印 Len=0x11 但数据 18 字节自相矛盾（PDF 提取/印刷错误），
-    /// 域组装按表结构：22 0004 03E8 01 09 28 0000 00 03 0000 0020
+    /// 手册 p.50-51 例3：嵌入 0x28 读 USER bank 32 字。
+    /// Data = Option(1)+SF(2)+Timeout(2)+Embedded(12) = 17 字节，
+    /// 与手册 Len=0x11 一致（修正：旧实现把 Address/WordCount 写成 2+2 字节，少 1 字节）。
     #[test]
     fn sync_inventory_embedded_encode() {
         let mut out = heapless::Vec::<u8, 248>::new();
@@ -631,9 +633,10 @@ mod tests {
             &out[..],
             &[
                 0x00, 0x00, 0x04, 0x03, 0xE8, // Option SF Timeout
-                0x01, 0x09, 0x28, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x20, // Embedded
+                0x01, 0x09, 0x28, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x20, // Embedded
             ]
         );
+        assert_eq!(out.len(), 17); // 与手册 p.51 示例的 Len=0x11 一致
     }
 
     /// 手册 p.50 例1 响应 + >255 标签变体 + p.51 例4 嵌入响应。

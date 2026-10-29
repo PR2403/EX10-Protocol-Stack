@@ -108,6 +108,7 @@ pub struct UhfReader<L: Link> { link: L, dec: StreamDecoder, txbuf: [u8;256], pu
 - `0xAA40` 持久配置: KEY+GETORSET+KEYDATA；KEY=0x91 设置时 KEYDATA=整个 0x91 帧（含 Len 与 Op，不含头与 CRC）（p.133）。
 - `0xAA4A` 回波: 响应 data=5+4M，每 4 字节 = 频点(3B)+回波损耗(0.1dB)；提供 VSWR 换算（p.150-151）。
 - `0xAA50` 温度: 响应尾随 TagLenth/PC/EPC/TagCRC；三种 PC 后缀对应三种量程换算（p.158-159）。
+  TagLEN 块的最后 2 字节即 TagCRC（边界为 `pos+tag_len-1`，勿越界）。
 
 ## 5. 实现顺序（M2 内部排期）
 

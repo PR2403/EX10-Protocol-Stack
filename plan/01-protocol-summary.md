@@ -86,7 +86,9 @@
    （标签/轮询）的 EPCLength 是 1 字节域、单位 byte**（p.61/64 实例，已真机验证）；
 4. 0x22 TagsFound：SearchFlags.BIT4=1 时为 4 字节且表示 >255；
 5. 嵌入读(0x22 Embedded) 的 Timeout/Option 域无效恒 0，总时长由外层 Timeout 决定；
-   嵌入读上限手册自相矛盾（p.49 说 32 字节，p.51 例3 读 32 字），实现取 32 字；
+   Embedded Values = Timeout(2)+Option(1)+Bank(1)+**Address(4)**+**WordCount(1)** = 9 字节，
+   Embedded Command Length 恒 0x09（p.51 例3）；嵌入读上限手册自相矛盾
+   （p.49 说 32 字节，p.51 例3 读 32 字），实现取 32 字；
 6. 扩展帧响应没有 SubCRC/Terminator，但 Status 在 Marker 之前；请求 Len 不含 BB
    且帧 CRC **含** BB（p.59/65/143/144/163 全部实例 CRC 命中验证）；
 7. 0x06(设波特率) 已失效 → 只能用 0xAA40 KEY=0x06；
@@ -96,9 +98,12 @@
 11. 多标签匹配过滤（Select-Option=0x07）前必须先 0xAA4C 成功设置；0x21 不支持 0x07；
 12. 中国版模块独有：定频、0xAA58、宜链功能；国外版受限；
 13. **TagEpcAndMeta 块尾 2 字节**：flags 未启用相位时=TagCRC；启用相位时（0x29/0xAA）
-    该尾域承载**起始相位 PHASE2**（结束相位在 Metadata 内），无额外 PHASE2 域（p.40）；
+    手册 p.41 称该尾域承载**起始相位 PHASE2**（结束相位在 Metadata 内），无额外域。
+    真机 Fw 2.0.7.3 实测 0x29（flags=0x003F）尾值仍为 TagCRC（8/8 与 PC+EPC 的
+    ISO6C CRC 一致），CLI 显示为 `PHASE2/TagCRC` 以免误导；
 14. 0xAA48 实例 SearchFlags=0x8003：高字节 BIT7=心跳使能；低字节 BIT0/1 手册未定义
     语义但实例使用 0x03，模型保留 `mode_bits` 原样透传；
 15. 手册勘误：p.26 0x08 实例 CRC 印 1D0C（与 0x03 雷同，实算 2A05）；
-    p.51 0x22 例3 Len=0x11 与 18 字节数据自相矛盾；p.163 0xAA51 文字要求
-    BIT7 模式 Timeout 低字节 0xFF 但实例为 0x2020（实现不强制）。
+    p.163 0xAA51 文字要求 BIT7 模式 Timeout 低字节 0xFF 但实例为 0x2020
+    （实现不强制）。注：p.51 0x22 例3 的 Len=0x11 本身正确，Data 恰为 17 字节，
+    Embedded Values 必须按 Timeout2+Option1+Bank1+Address4+WordCount1 编码。
