@@ -1,0 +1,25 @@
+[package]
+name = "uhf-ex10"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "uhf_ex10"
+path = "src/lib.rs"
+
+[[bin]]
+name = "uhf-demo"
+path = "src/main.rs"
+required-features = ["std"]
+
+[features]
+default = ["std"]
+std = ["dep:serialport", "dep:log", "dep:env_logger"]
+
+[dependencies]
+heapless = { version = "0.8", default-features = false }
+
+# 仅 std
+serialport = { version = "4", optional = true }
+log = { version = "0.4", optional = true }
+env_logger = { version = "0.11", optional = true }
