@@ -1,0 +1,43 @@
+[package]
+name = "size-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "bench"
+path = "src/lib.rs"
+
+[[bin]]
+name = "minimal"
+path = "src/bin/minimal.rs"
+
+[[bin]]
+name = "frame"
+path = "src/bin/frame.rs"
+
+[[bin]]
+name = "full"
+path = "src/bin/full.rs"
+
+[[bin]]
+name = "full_fmt"
+path = "src/bin/full_fmt.rs"
+required-features = ["fmt"]
+
+[features]
+fmt = []
+
+[dependencies]
+uhf-ex10 = { path = "..", default-features = false }
+heapless = { version = "0.8", default-features = false }
+
+# 基准统一采用 opt-level="s"(-Os) + fat LTO
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = false
+debug = false
+overflow-checks = false
