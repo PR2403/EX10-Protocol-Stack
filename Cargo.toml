@@ -13,6 +13,7 @@ exclude = [
     "plan/*",
     "size-bench/*",
     "examples/*",
+    "AGENTS.md",
     ".gitignore",
 ]
 
