@@ -82,6 +82,20 @@ for byte in uart_bytes {                     // 逐字节喂入
 }
 ```
 
+`examples/` 目录提供 4 个可运行例程:
+
+| 例程 | 需设备 | 演示内容 |
+|---|---|---|
+| `quick_start` | ✅ | 打开串口→进 APP→版本→0x22 盘存→0x29 读缓冲 |
+| `tag_access` | ✅ | 0x28 读 TID/USER、0x24 写 USER、0x91 功率设置 |
+| `async_inventory` | ✅ | 0xAA48 启动→收 10s 通知包→0xAA49 停止 |
+| `frame_offline` | ❌ | 帧构建/解析/流式解码器(手册黄金向量,无需硬件) |
+
+```bash
+cargo run --example quick_start -- /dev/ttyUSB0
+cargo run --example frame_offline        # 无设备也可体验
+```
+
 ## ⚠️ 致命陷阱:帧 CRC 是私有非标准算法
 
 帧尾 CRC-16 **不是**任何标准 CRC(CCITT-FALSE/MODBUS/XMODEM 均不匹配,poly 65536 全搜索无解)。手册附录 1 的 C 代码将数据位插入寄存器 **bit0**(标准 CRC 经 bit8 进入):

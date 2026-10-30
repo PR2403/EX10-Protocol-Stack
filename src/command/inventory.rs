@@ -537,7 +537,7 @@ mod tests {
         let r = parse_single_inventory(&f).unwrap();
         assert_eq!(r.option, 0x00);
         assert_eq!(r.epc, &[0xC0, 0xC0, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0xAA, 0xAA, 0x00, 0x09]);
-        assert_eq!(r.tag_crc, 0x641F & 0xFFFF);
+        assert_eq!(r.tag_crc, 0x641F);
     }
 
     /// 手册 p.44 实例2 响应：含元数据形态（AntID + Timestamp）。

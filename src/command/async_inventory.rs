@@ -246,7 +246,7 @@ mod tests {
         req.encode(&mut buf).unwrap();
         assert_eq!(buf[1], 0x27); // Len = 14 + 25（手册印 0x13 为勘误，应为 0x27）
         let hex: String = buf.iter().map(|b| format!("{b:02X} ")).collect();
-        assert_eq!(hex.ends_with("9B BB 0A BF "), true);
+        assert!(hex.ends_with("9B BB 0A BF "));
     }
 
     /// 手册 p.61 标签通知包实例1（flags=003F，EPCLength 单位字节）。

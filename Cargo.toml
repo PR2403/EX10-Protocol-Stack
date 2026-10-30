@@ -12,7 +12,6 @@ exclude = [
     "doc/*",
     "plan/*",
     "size-bench/*",
-    "examples/*",
     "AGENTS.md",
     ".gitignore",
 ]

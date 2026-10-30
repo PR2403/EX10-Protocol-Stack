@@ -213,8 +213,8 @@ mod tests {
     /// 手册 p.27 响应帧：FF 00 09 00 00 15 E9
     const BOOT_RESP: [u8; 7] = [0xFF, 0x00, 0x09, 0x00, 0x00, 0x15, 0xE9];
 
-    fn feed_collect<'d>(
-        dec: &'d mut StreamDecoder,
+    fn feed_collect(
+        dec: &mut StreamDecoder,
         bytes: &[u8],
     ) -> heapless::Vec<u16, 16> {
         let mut out: heapless::Vec<u16, 16> = heapless::Vec::new();
