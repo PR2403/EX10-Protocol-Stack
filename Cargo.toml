@@ -2,6 +2,19 @@
 name = "uhf-ex10"
 version = "0.1.0"
 edition = "2024"
+description = "EX10 系列 UHF RFID 读卡器(E310/E510/E710/E910)的 no_std Rust 协议栈：全指令覆盖、流式解码器、私有 CRC-16，含 std 串口传输层与 CLI"
+license = "MIT"
+repository = "https://github.com/PR2403/EX10-Protocol-Stack"
+readme = "README.md"
+keywords = ["rfid", "uhf", "rfid-reader", "no_std", "serial"]
+categories = ["hardware-support", "no-std", "embedded"]
+exclude = [
+    "doc/*",
+    "plan/*",
+    "size-bench/*",
+    "examples/*",
+    ".gitignore",
+]
 
 [lib]
 name = "uhf_ex10"
